@@ -2,6 +2,7 @@ package it.introini.vanmscraper.scraper.impl
 
 import com.google.inject.Inject
 import io.vertx.core.json.JsonObject
+import it.introini.vanmscraper.model.VanmTrip
 import it.introini.vanmscraper.scraper.VanmScraper
 import it.introini.vanmscraper.model.VanmTripInfo
 import org.jsoup.HttpStatusException
@@ -12,7 +13,7 @@ import java.util.*
 
 class VanmScraperImpl @Inject constructor(val config: JsonObject): VanmScraper {
 
-    override fun scrape(trip: String) {
+    override fun scrape(trip: String) : Pair<String, VanmTrip?> {
         val tripUrl = buildUrl(trip)
         try {
             val document = Jsoup.connect(tripUrl)
@@ -23,9 +24,11 @@ class VanmScraperImpl @Inject constructor(val config: JsonObject): VanmScraper {
             document.outputSettings().escapeMode(Entities.EscapeMode.xhtml)
             val tripInfo = tripInfo(document)
             println(tripInfo)
+            return Pair(tripUrl, VanmTrip(tripInfo))
         } catch (e: HttpStatusException) {
             println("Could not scrape trip $trip, ${e.message}, ${e.statusCode}")
         }
+        return Pair(tripUrl, null)
     }
 
     fun buildUrl(trip:String): String {

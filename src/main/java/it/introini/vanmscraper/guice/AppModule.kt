@@ -16,6 +16,7 @@ class AppModule : AbstractModule() {
     @Singleton @Provides @Inject fun mongoClient(vertx: Vertx, config: JsonObject): MongoClient {
         val mongoConfig = JsonObject()
         mongoConfig.put("connection_string", config.getString("mongo.connection_string"))
+        mongoConfig.put("db_name", config.getString("mongo.db_name"))
         return MongoClient.createShared(vertx, config)
     }
 }

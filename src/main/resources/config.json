@@ -1,0 +1,20 @@
+{
+  "vanm.base_url": "http://www.viaggiavventurenelmondo.it/",
+  "vanm.trip_url": "nuovosito/viaggi/schedeviaggi/",
+  "vanm.file_ext": ".php",
+
+  "vanm.parse.info_table": "table.promoTop1",
+  "vanm.parse.name": ".titoloviaggi font",
+  "vanm.parse.desc": ".sottotitoloviaggi b",
+  "vanm.parse.infos": ">tbody>tr:last-child table tr",
+  "vanm.parse.infos.class": "td.testatainformazioni",
+
+  "vanm.parse.infos.duration"   : "DURATA",
+  "vanm.parse.infos.period"     : "PERIODO",
+  "vanm.parse.infos.overnights" : "PERNOTTAMENTI",
+  "vanm.parse.infos.transports" : "TRASPORTI",
+  "vanm.parse.infos.meals"      : "PASTI",
+  "vanm.parse.infos.difficulty" : "DIFFICOLTA",
+  "vanm.parse.infos.visa"       : "VISTI E VACCINAZIONI",
+  "vanm.parse.infos.infos"      : "INFORMAZIONI"
+}

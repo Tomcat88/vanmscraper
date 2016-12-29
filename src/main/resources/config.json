@@ -15,6 +15,7 @@
   "vanm.parse.infos.class": "td.testatainformazioni",
   "vanm.parse.info_table2": "body>div>table>tbody>tr>td:last-child",
   "vanm.parse.classifications": "tr:nth-child(2) a",
+  "vanm.parse.countries": "tr:nth-child(4) img",
 
   "vanm.parse.infos.duration"   : "DURATA",
   "vanm.parse.infos.period"     : "PERIODO",
@@ -23,5 +24,8 @@
   "vanm.parse.infos.meals"      : "PASTI",
   "vanm.parse.infos.difficulty" : "DIFFICOLTA",
   "vanm.parse.infos.visa"       : "VISTI E VACCINAZIONI",
-  "vanm.parse.infos.infos"      : "INFORMAZIONI"
+  "vanm.parse.infos.infos"      : "INFORMAZIONI",
+
+  "vanm.parse.rates.extra_key"   : "supplemento",
+  "vanm.parse.rates.city_prefix" : "da "
 }

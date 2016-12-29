@@ -5,10 +5,7 @@ import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import io.vertx.core.json.JsonObject
 import it.introini.vanmscraper.manager.VanmTripManager
-import it.introini.vanmscraper.model.DbVanmTrip
-import it.introini.vanmscraper.model.TripStatus
-import it.introini.vanmscraper.model.VanmTrip
-import it.introini.vanmscraper.model.VanmTripInfo
+import it.introini.vanmscraper.model.*
 import org.bson.Document
 import java.time.Instant
 
@@ -17,8 +14,9 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
     val collection: MongoCollection<Document> = mongoClient.getCollection("trip")
 
     val tripMapper: (Document) -> DbVanmTrip = { json ->
-        val tripObj = json.get("trip", Document::class.java)
-        val tripInfoObj = tripObj.get("infos", Document::class.java)
+        val jsonObject = JsonObject(json.toJson())
+        val tripObj = jsonObject.getJsonObject("trip")
+        val tripInfoObj = tripObj.getJsonObject("infos")
         val tripInfo = VanmTripInfo(
                 tripInfoObj.getString("name"),
                 tripInfoObj.getString("description"),
@@ -30,16 +28,21 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                 tripInfoObj.getString("difficulty"),
                 tripInfoObj.getString("visas"),
                 tripInfoObj.getString("infos"),
-                tripInfoObj.get("classifications", Collection::class.java).map(Any?::toString),
-                tripInfoObj.get("countries", Collection::class.java).map(Any?::toString)
+                tripInfoObj.getJsonArray("classifications").map(Any?::toString),
+                tripInfoObj.getJsonArray("countries").map(Any?::toString)
         )
+        val tripRatesObj = tripInfoObj.getJsonArray("rates")
+        val tripRates = (0..tripRatesObj.size()).map { i ->
+            val e = tripRatesObj.getJsonObject(i)
+            VanmTripRate(RateType.valueOf(e.getString("type")), e.getString("description"), e.getString("currency"), e.getDouble("price"))
+        }
         DbVanmTrip(
-                json.getInteger("code"),
-                json.getString("str_code"),
-                json.getString("url"),
-                TripStatus.valueOf(json.getString("status")),
-                Instant.parse(json.getString("scraped_on")),
-                VanmTrip(tripInfo)
+                jsonObject.getInteger("code"),
+                jsonObject.getString("str_code"),
+                jsonObject.getString("url"),
+                TripStatus.valueOf(jsonObject.getString("status")),
+                jsonObject.getInstant("scraped_on"),
+                VanmTrip(tripInfo, tripRates)
         )
     }
 
@@ -58,6 +61,7 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                               .append("scraped_on", now.toString())
                               .append("status", TripStatus.OK.name)
                               .append("url", url)
+                              .append("rates", trip.rates.map { Document("type", it.rateType.name).append("description", it.description).append("currency", it.currency).append("price", it.price) })
                               .append("trip", Document("info", Document("name", trip.infos.name)
                                                                         .append("description", trip.infos.description)
                                                                         .append("duration", trip.infos.duration)

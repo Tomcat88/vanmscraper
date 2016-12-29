@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import it.introini.vanmscraper.config.Config
 import it.introini.vanmscraper.model.VanmTrip
 import it.introini.vanmscraper.model.VanmTripInfo
+import it.introini.vanmscraper.model.VanmTripRate
 import it.introini.vanmscraper.scraper.VanmScraper
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
@@ -18,7 +19,10 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
         val document = Jsoup.parse(html)
         document.outputSettings().charset(Charsets.ISO_8859_1)
         document.outputSettings().escapeMode(Entities.EscapeMode.xhtml)
-        return VanmTrip(tripInfo(document))
+        val tripRates = tripRates(document)
+        Logger.info(tripRates)
+        val tripInfo = tripInfo(document)
+        return VanmTrip(tripInfo, tripRates)
     }
 
     override fun scrapeURL(trip: String) : Pair<String, VanmTrip?> {
@@ -30,8 +34,8 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
                     .get()
 
             val tripInfo = tripInfo(document)
-            println(tripInfo)
-            return Pair(tripUrl, VanmTrip(tripInfo))
+            val tripRates = tripRates(document)
+            return Pair(tripUrl, VanmTrip(tripInfo, tripRates))
         } catch (e: HttpStatusException) {
             println("Could not scrapeURL trip $trip, ${e.message}, ${e.statusCode}")
         }
@@ -48,10 +52,6 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
     }
 
     private fun tripInfo(doc: Document): VanmTripInfo {
-        val tripInfo2 = doc.select(s("vanm.parse.info_table2"))
-        val classifications = tripInfo2.select(s("vanm.parse.classifications")).map { it.attr("href").split("#").last() }
-        val countries = tripInfo2.select("tr:nth-child(4) img").map { it.attr("alt") }
-        Logger.info(countries)
         val tripInfo = doc.select(s("vanm.parse.info_table"))
         val name = tripInfo.select(s("vanm.parse.name"))
         val description = tripInfo.select(s("vanm.parse.desc"))
@@ -68,8 +68,13 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
         listOf(durationKey, periodKey, overnightsKey, transportsKey, mealsKey, difficultyKey, visaKey, infosKey)
                 .forEach { k ->
                     infoRows.filter { it.childNodeSize() > 1 && it.select(s("vanm.parse.infos.class")).text().contains(k)}
-                            .map {  map.put(k, it.child(1).html()) }
+                            .forEach{  map.put(k, it.child(1).html()) }
                 }
+        val tripInfo2 = doc.select(s("vanm.parse.info_table2"))
+        val classifications = tripInfo2.select(s("vanm.parse.classifications")).map { it.attr("href").split("#").last() }
+        val countries = tripInfo2.select(s("vanm.parse.countries")).map { it.attr("alt") }
+        //Logger.info(countries)
+
         return VanmTripInfo(
                 name.text(),
                 description.text(),
@@ -84,6 +89,23 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
                 classifications,
                 countries
         )
+    }
+
+    private fun tripRates(doc: Document): List<VanmTripRate> {
+        val ratesTbody = doc.select("body>div>div>table>tbody")[1] // nth-child(1) doesn't work here
+        val ratesTrs = ratesTbody.select("tr").drop(1)
+        return ratesTrs.map { it.select("td") }.filter { it.size == 3 }.map { e ->
+            val description = e[0].html()
+            val currency = e[1].select("b").html()
+            val price = e[2].select("div>b").html().replace(".", "").toDouble()
+            if (description.toLowerCase().contains(s("vanm.parse.rates.extra_key"))) {
+                VanmTripRate.VanmTripExtra(description, currency, price)
+            } else if (description.toLowerCase().contains(s("vanm.parse.rates.city_prefix"))) {
+                VanmTripRate.VanmTripCity(description.replace(s("vanm.parse.rates.city_prefix"), ""), currency, price)
+            } else {
+                null
+            }
+        }.filter { it != null }.map { it!! }
     }
 
     private fun s(key:String): String = config.getString(key, "")

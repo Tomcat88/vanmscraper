@@ -7,5 +7,6 @@ import it.introini.vanmscraper.scraper.impl.VanmScraperImpl
 @ImplementedBy(VanmScraperImpl::class)
 interface VanmScraper {
 
-    fun scrape(trip: String): Pair<String, VanmTrip?>
+    fun scrapeURL(trip: String): Pair<String, VanmTrip?>
+    fun scrapeHTML(html: String): VanmTrip?
 }

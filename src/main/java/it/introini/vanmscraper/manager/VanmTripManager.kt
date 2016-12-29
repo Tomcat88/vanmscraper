@@ -9,10 +9,10 @@ import java.time.Instant
 
 @ImplementedBy(VanmTripManagerImpl::class)
 interface VanmTripManager {
-    fun maxCode(handler: AsyncResultHandler<Int?>)
-    fun trips(handler: AsyncResultHandler<Collection<DbVanmTrip>>)
-    fun scrapedOn(code: String, handler: AsyncResultHandler<Instant?>)
+    fun maxCode(): Int?
+    fun trips(): Collection<DbVanmTrip>
+    fun scrapedOn(code: String): Instant?
 
-    fun insert(now : Instant, code: String, url: String, trip: VanmTrip, handler: AsyncResultHandler<Void>)
-    fun insertMissing(now: Instant, code: String, url: String, handler: AsyncResultHandler<Void>)
+    fun insert(now : Instant, code: String, url: String, trip: VanmTrip)
+    fun insertMissing(now: Instant, code: String, url: String)
 }

@@ -1,10 +1,11 @@
 {
 
-  "mongo.connection_string": "mongodb://localhost:27017",
+  "mongo.host": "localhost",
+  "mongo.port": 27017,
   "mongo.db_name": "vanm_trips",
 
-  "vanm.base_url": "http://www.viaggiavventurenelmondo.it/",
-  "vanm.trip_url": "nuovosito/viaggi/schedeviaggi/",
+  "vanm.base_url": "http://www.viaggiavventurenelmondo.it",
+  "vanm.trip_url": "/nuovosito/viaggi/schedeviaggi/",
   "vanm.file_ext": ".php",
 
   "vanm.parse.info_table": "table.promoTop1",
@@ -12,6 +13,8 @@
   "vanm.parse.desc": ".sottotitoloviaggi b",
   "vanm.parse.infos": ">tbody>tr:last-child table tr",
   "vanm.parse.infos.class": "td.testatainformazioni",
+  "vanm.parse.info_table2": "body>div>table>tbody>tr>td:last-child",
+  "vanm.parse.classifications": "tr:nth-child(2) a",
 
   "vanm.parse.infos.duration"   : "DURATA",
   "vanm.parse.infos.period"     : "PERIODO",

@@ -8,6 +8,7 @@ import it.introini.vanmscraper.manager.VanmTripManager
 import it.introini.vanmscraper.model.*
 import org.bson.Document
 import java.time.Instant
+import java.time.LocalDate
 
 class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : VanmTripManager {
 
@@ -36,13 +37,25 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
             val e = tripRatesObj.getJsonObject(i)
             VanmTripRate(RateType.valueOf(e.getString("type")), e.getString("description"), e.getString("currency"), e.getDouble("price"))
         }
+        val tripSchedulesObj = tripInfoObj.getJsonArray("schedules")
+        val tripSchedules = (0..tripSchedulesObj.size()).map { i ->
+            val e = tripSchedulesObj.getJsonObject(i)
+            VanmTripSchedule(
+                    e.getInteger("code"),
+                    LocalDate.parse(e.getString("from")),
+                    LocalDate.parse(e.getString("to")),
+                    e.getInteger("booked"),
+                    e.getString("info"),
+                    e.getBoolean("open")
+            )
+        }
         DbVanmTrip(
                 jsonObject.getInteger("code"),
                 jsonObject.getString("str_code"),
                 jsonObject.getString("url"),
                 TripStatus.valueOf(jsonObject.getString("status")),
                 jsonObject.getInstant("scraped_on"),
-                VanmTrip(tripInfo, tripRates)
+                VanmTrip(tripInfo, tripRates, tripSchedules)
         )
     }
 
@@ -62,6 +75,7 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                               .append("status", TripStatus.OK.name)
                               .append("url", url)
                               .append("rates", trip.rates.map { Document("type", it.rateType.name).append("description", it.description).append("currency", it.currency).append("price", it.price) })
+                              .append("schedules", trip.schedules.map { Document("code", it.code).append("from", it.from.toString()).append("to", it.to.toString()).append("booked", it.booked).append("info", it.info).append("open", it.open) })
                               .append("trip", Document("info", Document("name", trip.infos.name)
                                                                         .append("description", trip.infos.description)
                                                                         .append("duration", trip.infos.duration)

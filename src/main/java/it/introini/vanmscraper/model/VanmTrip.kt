@@ -1,6 +1,7 @@
 package it.introini.vanmscraper.model
 
 import java.time.Instant
+import java.time.LocalDate
 
 data class DbVanmTrip(val code:Int, val strCode:String, val url:String, val status: TripStatus, val scrapedOn: Instant, val trip: VanmTrip)
 enum class TripStatus {
@@ -8,7 +9,7 @@ enum class TripStatus {
     MISSING,
     ERROR
 }
-data class VanmTrip(val infos: VanmTripInfo, val rates: List<VanmTripRate>)
+data class VanmTrip(val infos: VanmTripInfo, val rates: List<VanmTripRate>, val schedules: List<VanmTripSchedule>)
 data class VanmTripInfo(val name            : String?,
                         val description     : String?,
                         val duration        : String?,
@@ -28,6 +29,7 @@ data class VanmTripRate(val rateType: RateType, val description: String, val cur
         fun VanmTripCity(description: String, currency: String, price: Double) = VanmTripRate(RateType.CITY, description, currency, price)
     }
 }
+data class VanmTripSchedule(val code: Int, val from: LocalDate, val to: LocalDate, val booked: Int, val info: String?, val open: Boolean)
 
 enum class RateType {
     CITY,

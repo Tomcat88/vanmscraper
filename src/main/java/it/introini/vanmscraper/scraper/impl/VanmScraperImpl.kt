@@ -5,12 +5,13 @@ import it.introini.vanmscraper.config.Config
 import it.introini.vanmscraper.model.VanmTrip
 import it.introini.vanmscraper.model.VanmTripInfo
 import it.introini.vanmscraper.model.VanmTripRate
+import it.introini.vanmscraper.model.VanmTripSchedule
 import it.introini.vanmscraper.scraper.VanmScraper
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Entities
-import org.pmw.tinylog.Logger
+import java.time.LocalDate
 import java.util.*
 
 class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
@@ -19,10 +20,7 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
         val document = Jsoup.parse(html)
         document.outputSettings().charset(Charsets.ISO_8859_1)
         document.outputSettings().escapeMode(Entities.EscapeMode.xhtml)
-        val tripRates = tripRates(document)
-        Logger.info(tripRates)
-        val tripInfo = tripInfo(document)
-        return VanmTrip(tripInfo, tripRates)
+        return scrape(document)
     }
 
     override fun scrapeURL(trip: String) : Pair<String, VanmTrip?> {
@@ -33,13 +31,18 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
                     .timeout(5000)
                     .get()
 
-            val tripInfo = tripInfo(document)
-            val tripRates = tripRates(document)
-            return Pair(tripUrl, VanmTrip(tripInfo, tripRates))
+            return Pair(tripUrl, scrape(document))
         } catch (e: HttpStatusException) {
             println("Could not scrapeURL trip $trip, ${e.message}, ${e.statusCode}")
         }
         return Pair(tripUrl, null)
+    }
+
+    fun scrape(document: Document): VanmTrip {
+        val tripRates = tripRates(document)
+        val tripInfo = tripInfo(document)
+        val tripSchedule = tripSchedule(document)
+        return VanmTrip(tripInfo, tripRates, tripSchedule)
     }
 
 
@@ -106,6 +109,20 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
                 null
             }
         }.filter { it != null }.map { it!! }
+    }
+
+    private fun tripSchedule(doc: Document): List<VanmTripSchedule> {
+        val schedule = doc.select("body>div>div>table")[0]
+        return schedule.select("tbody>tr").drop(2).dropLast(3).map {
+            val elements = it.select("td")
+            val code = elements[0].select("div").html()
+            val from = elements[1].select("div").html().split("-").let { LocalDate.of(it[2].toInt(), it[1].toInt(), it[0].toInt()) }
+            val to = elements[2].select("div").html().split("-").let { LocalDate.of(it[2].toInt(), it[1].toInt(), it[0].toInt()) }
+            val booked = elements[3].select("div").html()
+            val info = elements[4].select("div").text()
+            val open = elements[5].select("div>input").isNotEmpty()
+            VanmTripSchedule(code.toInt(), from, to, booked.toInt(), info, open)
+        }
     }
 
     private fun s(key:String): String = config.getString(key, "")

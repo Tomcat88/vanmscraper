@@ -9,7 +9,7 @@ enum class TripStatus {
     MISSING,
     ERROR
 }
-data class VanmTrip(val infos: VanmTripInfo, val rates: List<VanmTripRate>, val schedules: List<VanmTripSchedule>)
+data class VanmTrip(val infos: VanmTripInfo, val rates: List<VanmTripRate>, val cashPools: List<VanmCashPool>, val schedules: List<VanmTripSchedule>, val mapUrl: String?, val routeHtml: String?)
 data class VanmTripInfo(val name            : String?,
                         val description     : String?,
                         val duration        : String?,
@@ -29,9 +29,16 @@ data class VanmTripRate(val rateType: RateType, val description: String, val cur
         fun VanmTripCity(description: String, currency: String, price: Double) = VanmTripRate(RateType.CITY, description, currency, price)
     }
 }
-data class VanmTripSchedule(val code: Int, val from: LocalDate, val to: LocalDate, val booked: Int, val info: String?, val open: Boolean)
+data class VanmTripSchedule(val code: Int, val from: LocalDate?, val to: LocalDate?, val booked: Int?, val info: String?, val open: Boolean)
+
+data class VanmCashPool(val description: String, val currency: Currency, val price: Double)
 
 enum class RateType {
     CITY,
     EXTRA
+}
+
+enum class Currency {
+    EUR,
+    USD
 }

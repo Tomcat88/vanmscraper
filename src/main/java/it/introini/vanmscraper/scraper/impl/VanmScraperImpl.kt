@@ -2,17 +2,16 @@ package it.introini.vanmscraper.scraper.impl
 
 import com.google.inject.Inject
 import it.introini.vanmscraper.config.Config
-import it.introini.vanmscraper.model.VanmTrip
-import it.introini.vanmscraper.model.VanmTripInfo
-import it.introini.vanmscraper.model.VanmTripRate
-import it.introini.vanmscraper.model.VanmTripSchedule
+import it.introini.vanmscraper.model.*
 import it.introini.vanmscraper.scraper.VanmScraper
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Entities
+import org.pmw.tinylog.Logger
 import java.time.LocalDate
 import java.util.*
+import it.introini.vanmscraper.model.Currency
 
 class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
 
@@ -33,18 +32,44 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
 
             return Pair(tripUrl, scrape(document))
         } catch (e: HttpStatusException) {
-            println("Could not scrapeURL trip $trip, ${e.message}, ${e.statusCode}")
+            Logger.error("Could not scrapeURL trip $trip, ${e.message}, ${e.statusCode}")
+        } catch (t: Throwable) {
+            Logger.error(t, "Generic exception")
         }
         return Pair(tripUrl, null)
     }
 
     fun scrape(document: Document): VanmTrip {
         val tripRates = tripRates(document)
+        val cashPool = cashPool(document)
         val tripInfo = tripInfo(document)
         val tripSchedule = tripSchedule(document)
-        return VanmTrip(tripInfo, tripRates, tripSchedule)
+        val mapUrl = mapUrl(document)
+        val routeHtml = routeHtml(document)
+        return VanmTrip(tripInfo, tripRates, cashPool, tripSchedule, mapUrl, routeHtml)
     }
 
+    fun routeHtml(document: Document): String? {
+        val table = document.select("body>div>div>table").getOrNull(4)
+        return table?.select("tr>td")?.getOrNull(1)?.html()
+    }
+
+    fun mapUrl(document: Document): String? {
+        val table = document.select("body>div>div>table").getOrNull(3)
+        return table?.select("iframe")?.attr("src")
+    }
+
+    fun cashPool(document: Document): List<VanmCashPool> {
+        val table = document.select("body>div>div>table").getOrNull(2)
+        return table?.select("tr")?.drop(1)?.filter { it.select("td").size == 3 }
+                ?.map { tr ->
+                    val tds = tr.select("td")
+                    val desc = tds[0].text()
+                    val cur = tds[1].select("b").text()
+                    val price = tds[2].select("div>b").text().replace(".", "")
+                    VanmCashPool(desc, Currency.valueOf(cur), price.toDouble())
+                } ?: emptyList()
+    }
 
 
     private fun buildUrl(trip:String): String {
@@ -112,17 +137,21 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
     }
 
     private fun tripSchedule(doc: Document): List<VanmTripSchedule> {
-        val schedule = doc.select("body>div>div>table")[0]
-        return schedule.select("tbody>tr").drop(2).dropLast(3).map {
+        val schedule = doc.select("body>div>div>table").getOrNull(0)
+        return schedule?.select("tbody>tr")?.drop(2)?.dropLast(3)?.map {
             val elements = it.select("td")
-            val code = elements[0].select("div").html()
-            val from = elements[1].select("div").html().split("-").let { LocalDate.of(it[2].toInt(), it[1].toInt(), it[0].toInt()) }
-            val to = elements[2].select("div").html().split("-").let { LocalDate.of(it[2].toInt(), it[1].toInt(), it[0].toInt()) }
-            val booked = elements[3].select("div").html()
-            val info = elements[4].select("div").text()
-            val open = elements[5].select("div>input").isNotEmpty()
-            VanmTripSchedule(code.toInt(), from, to, booked.toInt(), info, open)
-        }
+            val code = elements.getOrNull(0)?.select("div")?.html()
+            if (code.isNullOrBlank()) {
+                null
+            } else {
+                val from = elements.getOrNull(1)?.select("div")?.html()?.split("-")?.let { LocalDate.of(it[2].toInt(), it[1].toInt(), it[0].toInt()) }
+                val to = elements.getOrNull(2)?.select("div")?.html()?.split("-")?.let { LocalDate.of(it[2].toInt(), it[1].toInt(), it[0].toInt()) }
+                val booked = elements.getOrNull(3)?.select("div")?.html()
+                val info = elements.getOrNull(4)?.select("div")?.text()
+                val open = elements.getOrNull(5)?.select("div>input")?.isNotEmpty() ?: false
+                VanmTripSchedule(code!!.toInt(), from, to, if(booked.isNullOrBlank()) 0 else booked?.toInt(), info, open)
+            }
+        }?.filterNotNull() ?: emptyList()
     }
 
     private fun s(key:String): String = config.getString(key, "")

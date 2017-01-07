@@ -3,6 +3,9 @@ package it.introini.vanmscraper.manager.impl
 import com.google.inject.Inject
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mongodb.client.model.Filters.eq
+import com.mongodb.client.model.FindOneAndReplaceOptions
+import com.mongodb.client.model.UpdateOptions
 import io.vertx.core.json.JsonObject
 import it.introini.vanmscraper.manager.VanmTripManager
 import it.introini.vanmscraper.model.*
@@ -32,12 +35,12 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                 tripInfoObj.getJsonArray("classifications").map(Any?::toString),
                 tripInfoObj.getJsonArray("countries").map(Any?::toString)
         )
-        val tripRatesObj = tripInfoObj.getJsonArray("rates")
+        val tripRatesObj = tripObj.getJsonArray("rates")
         val tripRates = (0..tripRatesObj.size()).map { i ->
             val e = tripRatesObj.getJsonObject(i)
             VanmTripRate(RateType.valueOf(e.getString("type")), e.getString("description"), e.getString("currency"), e.getDouble("price"))
         }
-        val tripSchedulesObj = tripInfoObj.getJsonArray("schedules")
+        val tripSchedulesObj = tripObj.getJsonArray("schedules")
         val tripSchedules = (0..tripSchedulesObj.size()).map { i ->
             val e = tripSchedulesObj.getJsonObject(i)
             VanmTripSchedule(
@@ -49,13 +52,24 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                     e.getBoolean("open")
             )
         }
+        val cachPoolsObj = tripObj.getJsonArray("cash_pools")
+        val cashPools = (0..cachPoolsObj.size()).map { i ->
+            val e = cachPoolsObj.getJsonObject(i)
+            VanmCashPool(
+                    e.getString("description"),
+                    Currency.valueOf(e.getString("currency")),
+                    e.getDouble("price")
+            )
+        }
+        val mapUrl = tripObj.getString("map_url")
+        val routeHtml = tripObj.getString("route_html")
         DbVanmTrip(
                 jsonObject.getInteger("code"),
                 jsonObject.getString("str_code"),
                 jsonObject.getString("url"),
                 TripStatus.valueOf(jsonObject.getString("status")),
                 jsonObject.getInstant("scraped_on"),
-                VanmTrip(tripInfo, tripRates, tripSchedules)
+                VanmTrip(tripInfo, tripRates, cashPools, tripSchedules, mapUrl, routeHtml)
         )
     }
 
@@ -74,8 +88,6 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                               .append("scraped_on", now.toString())
                               .append("status", TripStatus.OK.name)
                               .append("url", url)
-                              .append("rates", trip.rates.map { Document("type", it.rateType.name).append("description", it.description).append("currency", it.currency).append("price", it.price) })
-                              .append("schedules", trip.schedules.map { Document("code", it.code).append("from", it.from.toString()).append("to", it.to.toString()).append("booked", it.booked).append("info", it.info).append("open", it.open) })
                               .append("trip", Document("info", Document("name", trip.infos.name)
                                                                         .append("description", trip.infos.description)
                                                                         .append("duration", trip.infos.duration)
@@ -85,8 +97,14 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                                                                         .append("meals", trip.infos.meals)
                                                                         .append("difficulty", trip.infos.difficulty)
                                                                         .append("visas", trip.infos.visas)
-                                                                        .append("infos", trip.infos.infos)))
-         collection.insertOne(jsonTrip)
+                                                                        .append("infos", trip.infos.infos))
+                                              .append("map_url", trip.mapUrl)
+                                              .append("route_html", trip.routeHtml)
+                                              .append("schedules", trip.schedules.map { Document("code", it.code).append("from", it.from.toString()).append("to", it.to.toString()).append("booked", it.booked).append("info", it.info).append("open", it.open) })
+                                              .append("cash_pools", trip.cashPools.map { Document("description", it.description).append("currency", it.currency.name).append("price", it.price) })
+                                              .append("rates", trip.rates.map { Document("type", it.rateType.name).append("description", it.description).append("currency", it.currency).append("price", it.price) }))
+
+         collection.findOneAndReplace(eq("code", code.toInt()), jsonTrip, FindOneAndReplaceOptions().upsert(true))
     }
 
     override fun insertMissing(now: Instant, code: String, url: String) {

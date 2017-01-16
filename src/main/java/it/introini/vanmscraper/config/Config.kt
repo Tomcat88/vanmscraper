@@ -6,8 +6,9 @@ import io.vertx.core.json.JsonObject
 
 class Config @Inject constructor(val jsonConfig: JsonObject) {
 
-    fun getString(param: String, def: String) = jsonConfig.getString(param, def)
-    fun getInt(param: String, def: Int)       = jsonConfig.getInteger(param, def)
-    fun getDouble(param: String, def: Double) = jsonConfig.getDouble(param, def)
-    fun getLong(param: String, def: Long)     = jsonConfig.getLong(param, def)
+    fun getString(param: String, def: String)   = jsonConfig.getString(param, def)
+    fun getInt(param: String, def: Int)         = jsonConfig.getInteger(param, def)
+    fun getDouble(param: String, def: Double)   = jsonConfig.getDouble(param, def)
+    fun getLong(param: String, def: Long): Long = jsonConfig.getLong(param, def)
+    fun getBoolean(param: String, def: Boolean) = jsonConfig.getBoolean(param, def)
 }

@@ -89,14 +89,14 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
         val overnightsKey = s("vanm.parse.infos.overnights")
         val transportsKey = s("vanm.parse.infos.transports")
         val mealsKey = s("vanm.parse.infos.meals")
-        val difficultyKey = s("vanm.parse.infos.meals")
+        val difficultyKey = s("vanm.parse.infos.difficulty")
         val visaKey = s("vanm.parse.infos.visa")
         val infosKey = s("vanm.parse.infos.infos")
         val map = HashMap<String,String>()
         listOf(durationKey, periodKey, overnightsKey, transportsKey, mealsKey, difficultyKey, visaKey, infosKey)
                 .forEach { k ->
                     infoRows.filter { it.childNodeSize() > 1 && it.select(s("vanm.parse.infos.class")).text().contains(k)}
-                            .forEach{  map.put(k, it.child(1).html()) }
+                            .forEach{  map.put(k, it.child(1).text()) }
                 }
         val tripInfo2 = doc.select(s("vanm.parse.info_table2"))
         val classifications = tripInfo2.select(s("vanm.parse.classifications")).map { it.attr("href").split("#").last() }

@@ -28,6 +28,9 @@ dependencies {
 
     // https://mvnrepository.com/artifact/io.vertx/vertx-core
     compile group: 'io.vertx', name: 'vertx-core', version: '3.3.3'
+    // https://mvnrepository.com/artifact/io.vertx/vertx-web
+    compile group: 'io.vertx', name: 'vertx-web', version: '3.3.3'
+
     compile 'org.mongodb:mongodb-driver:3.4.1'
 
     // https://mvnrepository.com/artifact/com.google.inject/guice

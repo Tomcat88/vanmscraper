@@ -1,4 +1,5 @@
 {
+  "app.scraper.enable": false,
 
   "mongo.host": "localhost",
   "mongo.port": 27017,

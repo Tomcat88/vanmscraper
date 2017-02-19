@@ -14,7 +14,6 @@ import java.time.Instant
 import java.time.LocalDate
 
 class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : VanmTripManager {
-
     val collection: MongoCollection<Document> = mongoClient.getCollection("trip")
 
     val tripMapper: (Document) -> DbVanmTrip = { json ->
@@ -79,6 +78,8 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
     }
 
     override fun trips(): Collection<DbVanmTrip> = collection.find().map(tripMapper).toList()
+
+    override fun jsonTripByCode(code: String): JsonObject? = collection.find(Document("code", code.toInt())).firstOrNull()?.toJson()?.let(::JsonObject)
 
     override fun scrapedOn(code: String): Instant? = collection.find(Document("code", code)).projection(Document("scraped_on", 1)).limit(1).firstOrNull()?.getString("scraped_on").let(Instant::parse)
 

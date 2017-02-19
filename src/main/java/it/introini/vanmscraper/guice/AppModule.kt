@@ -7,12 +7,14 @@ import com.google.inject.Singleton
 import com.mongodb.MongoClient
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
+import io.vertx.ext.web.Router
 import it.introini.vanmscraper.config.Config
 
 class AppModule : AbstractModule() {
     override fun configure() { }
 
     @Singleton @Provides fun vertx(): Vertx = Vertx.currentContext().owner()
+    @Singleton @Provides fun router(vertx: Vertx): Router = Router.router(vertx)
     @Singleton @Provides fun config(): JsonObject = Vertx.currentContext().config()
     @Singleton @Provides @Inject fun mongoClient(config: Config): MongoClient {
         val host = config.getString("mongo.host", "localhost")

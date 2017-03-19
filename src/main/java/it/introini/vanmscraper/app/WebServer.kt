@@ -11,7 +11,7 @@ class WebServer @Inject constructor(val vertx: Vertx,
                                     val routerService: RouterService) {
 
     fun start() {
-        val port = config.getInt("web.port", 8080)
+        val port = config.getInt("web.port", 8081)
         val httpServer = vertx.createHttpServer()
         httpServer.requestHandler{ routerService.router.accept(it) }
         httpServer.listen(port) {

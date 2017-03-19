@@ -17,14 +17,17 @@ class Scraper @Inject constructor(val vertx: Vertx,
 
     val MAX_CODE: Int = config.getInt("app.max_code", 9999)
     val SCRAPE_BUFFER: Int = config.getInt("app.scrape_buffer", 20)
-    val APP_DELAY: Long = config.getLong("app.delay", 10000)
+    val APP_DELAY: Long = config.getLong("app.delay", 60000)
 
     fun start() {
         if (config.getBoolean("app.scraper.enable", false)) {
             vertx.setPeriodic(APP_DELAY, { e ->
                 val (from, to) = vanmScrapeHelper.getAndSetMaxCode(SCRAPE_BUFFER)
                 if (from >= MAX_CODE) {
-                    //get old scraped
+                    if (config.getBoolean("app.rescrape", false)) {
+                        //get old scraped
+
+                    }
                 } else {
                     (from + 1..to).forEach { i ->
                         val code = String.format("%04d", i)
@@ -36,6 +39,8 @@ class Scraper @Inject constructor(val vertx: Vertx,
                     }
                 }
             })
+        } else {
+            Logger.info("Scraper not enabled!")
         }
     }
 

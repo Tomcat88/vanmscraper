@@ -9,7 +9,7 @@ import sun.misc.IOUtils
 fun main(args: Array<String>) {
     val injector = Guice.createInjector(TestModule())
     val scraper = injector.getInstance(VanmScraper::class.java)
-    val resourceAsStream = TestModule::class.java.getResourceAsStream("./3810.html")
+    val resourceAsStream = TestModule::class.java.getResourceAsStream("./3660.html")
     val html = String(IOUtils.readFully(resourceAsStream, resourceAsStream.available(), true))
     scraper.scrapeHTML(html)
 }

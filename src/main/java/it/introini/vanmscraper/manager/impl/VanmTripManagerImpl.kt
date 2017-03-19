@@ -4,8 +4,8 @@ import com.google.inject.Inject
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.Filters.eq
+import com.mongodb.client.model.Filters.regex
 import com.mongodb.client.model.FindOneAndReplaceOptions
-import com.mongodb.client.model.UpdateOptions
 import io.vertx.core.json.JsonObject
 import it.introini.vanmscraper.manager.VanmTripManager
 import it.introini.vanmscraper.model.*
@@ -14,12 +14,13 @@ import java.time.Instant
 import java.time.LocalDate
 
 class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : VanmTripManager {
+
     val collection: MongoCollection<Document> = mongoClient.getCollection("trip")
 
     val tripMapper: (Document) -> DbVanmTrip = { json ->
         val jsonObject = JsonObject(json.toJson())
         val tripObj = jsonObject.getJsonObject("trip")
-        val tripInfoObj = tripObj.getJsonObject("infos")
+        val tripInfoObj = tripObj.getJsonObject("info")
         val tripInfo = VanmTripInfo(
                 tripInfoObj.getString("name"),
                 tripInfoObj.getString("description"),
@@ -31,16 +32,16 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                 tripInfoObj.getString("difficulty"),
                 tripInfoObj.getString("visas"),
                 tripInfoObj.getString("infos"),
-                tripInfoObj.getJsonArray("classifications").map(Any?::toString),
-                tripInfoObj.getJsonArray("countries").map(Any?::toString)
+                tripInfoObj.getJsonArray("classifications")?.map(Any?::toString) ?: emptyList(),
+                tripInfoObj.getJsonArray("countries")?.map(Any?::toString) ?: emptyList()
         )
         val tripRatesObj = tripObj.getJsonArray("rates")
-        val tripRates = (0..tripRatesObj.size()).map { i ->
+        val tripRates = (0 until tripRatesObj.size()).map { i ->
             val e = tripRatesObj.getJsonObject(i)
             VanmTripRate(RateType.valueOf(e.getString("type")), e.getString("description"), e.getString("currency"), e.getDouble("price"))
         }
         val tripSchedulesObj = tripObj.getJsonArray("schedules")
-        val tripSchedules = (0..tripSchedulesObj.size()).map { i ->
+        val tripSchedules = (0 until tripSchedulesObj.size()).map { i ->
             val e = tripSchedulesObj.getJsonObject(i)
             VanmTripSchedule(
                     e.getInteger("code"),
@@ -52,7 +53,7 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
             )
         }
         val cachPoolsObj = tripObj.getJsonArray("cash_pools")
-        val cashPools = (0..cachPoolsObj.size()).map { i ->
+        val cashPools = (0 until cachPoolsObj.size()).map { i ->
             val e = cachPoolsObj.getJsonObject(i)
             VanmCashPool(
                     e.getString("description"),
@@ -70,6 +71,11 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                 jsonObject.getInstant("scraped_on"),
                 VanmTrip(tripInfo, tripRates, cashPools, tripSchedules, mapUrl, routeHtml)
         )
+    }
+
+    override fun search(name: String?): Collection<DbVanmTrip> {
+        val nameDoc = name?.let { regex("trip.info.name", "$name", "i") }
+        return collection.find(nameDoc).sort(Document("trip.info.name", 1)).map(tripMapper).toList()
     }
 
     override fun maxCode(): Int? {
@@ -98,7 +104,9 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                                                                         .append("meals", trip.infos.meals)
                                                                         .append("difficulty", trip.infos.difficulty)
                                                                         .append("visas", trip.infos.visas)
-                                                                        .append("infos", trip.infos.infos))
+                                                                        .append("infos", trip.infos.infos)
+                                                                        .append("classifications", trip.infos.classifications)
+                                                                        .append("countries", trip.infos.countries))
                                               .append("map_url", trip.mapUrl)
                                               .append("route_html", trip.routeHtml)
                                               .append("schedules", trip.schedules.map { Document("code", it.code).append("from", it.from.toString()).append("to", it.to.toString()).append("booked", it.booked).append("info", it.info).append("open", it.open) })

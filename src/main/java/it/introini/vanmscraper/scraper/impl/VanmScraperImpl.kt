@@ -15,6 +15,9 @@ import it.introini.vanmscraper.model.Currency
 
 class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
 
+    val durationRegex = Regex("(?i)(\\d+) GIORNI")
+
+
     override fun scrapeHTML(html: String): VanmTrip? {
         val document = Jsoup.parse(html)
         document.outputSettings().charset(Charsets.ISO_8859_1)
@@ -102,11 +105,13 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
         val classifications = tripInfo2.select(s("vanm.parse.classifications")).map { it.attr("href").split("#").last() }
         val countries = tripInfo2.select(s("vanm.parse.countries")).map { it.attr("alt") }
         //Logger.info(countries)
+        val days = map[durationKey]?.let { durationRegex.find(it) }.let { it?.value?.toInt() }
 
         return VanmTripInfo(
                 name.text(),
                 description.text(),
                 map[durationKey],
+                days,
                 map[periodKey],
                 map[overnightsKey],
                 map[transportsKey],

@@ -25,6 +25,7 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
                 tripInfoObj.getString("name"),
                 tripInfoObj.getString("description"),
                 tripInfoObj.getString("duration"),
+                tripInfoObj.getInteger("days"),
                 tripInfoObj.getString("period"),
                 tripInfoObj.getString("overnights"),
                 tripInfoObj.getString("transports"),

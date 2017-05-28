@@ -90,10 +90,11 @@ class VanmTripManagerImpl @Inject constructor(mongoClient: MongoDatabase) : Vanm
 
     override fun scrapedOn(code: String): Instant? = collection.find(Document("code", code)).projection(Document("scraped_on", 1)).limit(1).firstOrNull()?.getString("scraped_on").let(Instant::parse)
 
-    override fun insert(now: Instant, code: String, url: String, trip: VanmTrip) {
+    override fun insert(now: Instant, code: String, url: String, hash: String, trip: VanmTrip) {
         val jsonTrip = Document("str_code", code)
                               .append("code", code.toInt())
                               .append("scraped_on", now.toString())
+                              .append("hash", hash)
                               .append("status", TripStatus.OK.name)
                               .append("url", url)
                               .append("trip", Document("info", Document("name", trip.infos.name)

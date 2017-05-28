@@ -25,6 +25,8 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
         return scrape(document)
     }
 
+    override fun scrapeDocument(document: Document): VanmTrip? = scrape(document)
+
     override fun scrapeURL(trip: String) : Pair<String, VanmTrip?> {
         val tripUrl = buildUrl(trip)
         try {
@@ -33,6 +35,7 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
                     .timeout(5000)
                     .get()
 
+            document.html()
             return Pair(tripUrl, scrape(document))
         } catch (e: HttpStatusException) {
             Logger.error("Could not scrapeURL trip $trip, ${e.message}, ${e.statusCode}")
@@ -42,7 +45,7 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
         return Pair(tripUrl, null)
     }
 
-    fun scrape(document: Document): VanmTrip {
+    private fun scrape(document: Document): VanmTrip {
         val tripRates = tripRates(document)
         val cashPool = cashPool(document)
         val tripInfo = tripInfo(document)
@@ -52,17 +55,17 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
         return VanmTrip(tripInfo, tripRates, cashPool, tripSchedule, mapUrl, routeHtml)
     }
 
-    fun routeHtml(document: Document): String? {
+    private fun routeHtml(document: Document): String? {
         val table = document.select("body>div>div>table").getOrNull(4)
         return table?.select("tr>td")?.getOrNull(1)?.html()
     }
 
-    fun mapUrl(document: Document): String? {
+    private fun mapUrl(document: Document): String? {
         val table = document.select("body>div>div>table").getOrNull(3)
         return table?.select("iframe")?.attr("src")
     }
 
-    fun cashPool(document: Document): List<VanmCashPool> {
+    private fun cashPool(document: Document): List<VanmCashPool> {
         val table = document.select("body>div>div>table").getOrNull(2)
         return table?.select("tr")?.drop(1)?.filter { it.select("td").size == 3 }
                 ?.map { tr ->
@@ -105,7 +108,7 @@ class VanmScraperImpl @Inject constructor(val config: Config): VanmScraper {
         val classifications = tripInfo2.select(s("vanm.parse.classifications")).map { it.attr("href").split("#").last() }
         val countries = tripInfo2.select(s("vanm.parse.countries")).map { it.attr("alt") }
         //Logger.info(countries)
-        val days = map[durationKey]?.let { durationRegex.find(it) }.let { it?.value?.toInt() }
+        val days = map[durationKey]?.let { durationRegex.find(it) }.let { it?.groups?.get(1)?.value?.toInt() }
 
         return VanmTripInfo(
                 name.text(),

@@ -15,6 +15,6 @@ interface VanmTripManager {
     fun search(name: String?): Collection<DbVanmTrip>
     fun scrapedOn(code: String): Instant?
 
-    fun insert(now : Instant, code: String, url: String, trip: VanmTrip)
+    fun insert(now : Instant, code: String, url: String, hash: String, trip: VanmTrip)
     fun insertMissing(now: Instant, code: String, url: String)
 }

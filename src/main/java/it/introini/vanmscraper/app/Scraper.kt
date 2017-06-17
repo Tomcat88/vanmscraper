@@ -23,34 +23,37 @@ class Scraper @Inject constructor(val vertx: Vertx,
 
     fun start() {
         if (config.getBoolean("app.scraper.enable", false)) {
-            vertx.setPeriodic(APP_DELAY, { e ->
-            val today = LocalDate.now()
-            val (from, to) = vanmScrapeHelper.getAndSetMaxCode(SCRAPE_BUFFER)
-                (from + 1..to).forEach { i ->
-                    val code = String.format("%04d", i)
-                    val trip = vanmTripManager.jsonTripByCode(code)
-                    val scrapedOn = trip?.getInstant("scraped_on")?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: LocalDate.MIN
-                    if (today.isAfter(scrapedOn.plusDays(RESCRAPE_DAYS_THRESHOLD))) {
-                        val hash = trip?.getString("hash")
-                        val tripUrl = vanmScrapeHelper.buildUrl(code)
-                        val doc = vanmScrapeHelper.getDocument(tripUrl)
-                        if (doc != null) {
-                            val calculatedHash = vanmScrapeHelper.calculateHash(doc)
-                            if (hash == calculatedHash) {
-                                Logger.info("Trip {} has not changed since last scrape ({}), skipping...", code, scrapedOn)
-                            } else {
-                                val vanmTrip = vanmScraper.scrapeDocument(doc)
-                                if (vanmTrip != null) {
-                                    vanmTripManager.insert(Instant.now(), code, tripUrl, calculatedHash, vanmTrip)
-                                    Logger.info("Succesfully inserted scraped trip ($code) url: ($tripUrl)")
-                                }
-                            }
-                        }
-                    }
-                }
-            })
+            vertx.setPeriodic(APP_DELAY, this::scrapeEvent)
         } else {
             Logger.info("Scraper not enabled!")
+        }
+    }
+
+    private fun scrapeEvent(e: Long) {
+        val now = LocalDate.now()
+        val (from, to) = vanmScrapeHelper.getAndSetMaxCode(SCRAPE_BUFFER)
+        (from + 1..to).forEach { scrapeByCode(String.format("%04d", it), now) }
+    }
+
+    private fun scrapeByCode(code: String, now: LocalDate) {
+        val trip = vanmTripManager.jsonTripByCode(code)
+        val scrapedOn = trip?.getInstant("scraped_on")?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: LocalDate.MIN
+        if (now.isAfter(scrapedOn.plusDays(RESCRAPE_DAYS_THRESHOLD))) {
+            val hash = trip?.getString("hash")
+            val tripUrl = vanmScrapeHelper.buildUrl(code)
+            val doc = vanmScrapeHelper.getDocument(tripUrl)
+            if (doc != null) {
+                val calculatedHash = vanmScrapeHelper.calculateHash(doc)
+                if (hash == calculatedHash) {
+                    Logger.info("Trip {} has not changed since last scrape ({}), skipping...", code, scrapedOn)
+                } else {
+                    val vanmTrip = vanmScraper.scrapeDocument(doc)
+                    if (vanmTrip != null) {
+                        vanmTripManager.insert(Instant.now(), code, tripUrl, calculatedHash, vanmTrip)
+                        Logger.info("Succesfully inserted scraped trip ($code) url: ($tripUrl)")
+                    }
+                }
+            }
         }
     }
 

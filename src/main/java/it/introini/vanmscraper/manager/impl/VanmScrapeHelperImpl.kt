@@ -15,9 +15,14 @@ import java.security.MessageDigest
 
 class VanmScrapeHelperImpl @Inject constructor(val config:        Config,
                                                    mongoDatabase: MongoDatabase) : VanmScrapeHelper {
-
     val collection: MongoCollection<Document> = mongoDatabase.getCollection("scrape_helper")
+    val requestCollection: MongoCollection<Document> = mongoDatabase.getCollection("requests")
     val MAX_CODE: Int = config.getInt("app.max_code", 9999)
+
+    override fun getScrapeRequests(buffer: Int): Collection<String> {
+        requestCollection.find(Document())
+        return emptyList()
+    }
 
     override fun getAndSetMaxCode(buffer: Int): Pair<Int, Int> {
         val maxcode = collection.find(Document("param", "max_code")).limit(1).firstOrNull()

@@ -21,3 +21,4 @@ gradle-app.setting
 .gradletasknamecache
 .vertx
 /src/test/resources/
+*.iml

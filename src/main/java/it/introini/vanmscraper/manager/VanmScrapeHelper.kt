@@ -6,6 +6,8 @@ import org.jsoup.nodes.Document
 
 @ImplementedBy(VanmScrapeHelperImpl::class)
 interface VanmScrapeHelper {
+
+    fun getScrapeRequests(buffer: Int): Collection<String>
     fun getAndSetMaxCode(buffer: Int): Pair<Int, Int>
     fun getDocument(url: String): Document?
     fun buildUrl(trip: String): String

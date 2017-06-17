@@ -3,8 +3,11 @@ package it.introini.vanmscraper.manager.impl
 import com.google.inject.Inject
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mongodb.client.model.Filters.`in`
 import com.mongodb.client.model.Filters.eq
 import com.mongodb.client.model.UpdateOptions
+import com.mongodb.client.model.Updates.combine
+import com.mongodb.client.model.Updates.set
 import it.introini.vanmscraper.config.Config
 import it.introini.vanmscraper.manager.VanmScrapeHelper
 import org.bson.Document
@@ -12,6 +15,7 @@ import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.pmw.tinylog.Logger
 import java.security.MessageDigest
+import java.time.Instant
 
 class VanmScrapeHelperImpl @Inject constructor(val config:        Config,
                                                    mongoDatabase: MongoDatabase) : VanmScrapeHelper {
@@ -19,9 +23,16 @@ class VanmScrapeHelperImpl @Inject constructor(val config:        Config,
     val requestCollection: MongoCollection<Document> = mongoDatabase.getCollection("requests")
     val MAX_CODE: Int = config.getInt("app.max_code", 9999)
 
+    override fun insertScrapeRequest(now: Instant, code: String) {
+        requestCollection.insertOne(Document("status", "INSERTED").append("code", code).append("requested_on", now))
+    }
+
     override fun getScrapeRequests(buffer: Int): Collection<String> {
-        requestCollection.find(Document())
-        return emptyList()
+        return requestCollection.find(Document("status", "INSERTED")).limit(buffer).map { it.getString("code") }.toList()
+    }
+
+    override fun completeScrapeRequests(now: Instant, codes: Collection<String>) {
+        requestCollection.updateMany(`in`("code", codes), combine(set("status", "COMPLETED"), set("completed_on", now)))
     }
 
     override fun getAndSetMaxCode(buffer: Int): Pair<Int, Int> {

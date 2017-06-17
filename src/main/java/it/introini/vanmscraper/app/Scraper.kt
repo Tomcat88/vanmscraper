@@ -19,11 +19,13 @@ class Scraper @Inject constructor(val vertx: Vertx,
 
     val SCRAPE_BUFFER: Int            = config.getInt("app.scrape_buffer", 20)
     val APP_DELAY: Long               = config.getLong("app.delay", 60000)
+    val CHECK_REQUESTS_DELAY: Long    = config.getLong("app.check_requests_delay", 10000)
     val RESCRAPE_DAYS_THRESHOLD :Long = config.getLong("app.rescrape_days_threshold", 1)
 
     fun start() {
         if (config.getBoolean("app.scraper.enable", false)) {
             vertx.setPeriodic(APP_DELAY, this::scrapeEvent)
+            vertx.setPeriodic(CHECK_REQUESTS_DELAY, this::checkScrapeRequest)
         } else {
             Logger.info("Scraper not enabled!")
         }
@@ -35,8 +37,24 @@ class Scraper @Inject constructor(val vertx: Vertx,
         (from + 1..to).forEach { scrapeByCode(String.format("%04d", it), now) }
     }
 
-    private fun scrapeByCode(code: String, now: LocalDate) {
+    private fun checkScrapeRequest(e: Long) {
+        val today = LocalDate.now()
+        val now = Instant.now()
+
+        vanmScrapeHelper.getScrapeRequests(SCRAPE_BUFFER).map {
+            Pair(it, scrapeByCode(it, today))
+        }.filter{
+            it.second
+        }.map {
+            it.first
+        }.let {
+            vanmScrapeHelper.completeScrapeRequests(now, it)
+        }
+    }
+
+    private fun scrapeByCode(code: String, now: LocalDate): Boolean {
         val trip = vanmTripManager.jsonTripByCode(code)
+        var scraped = false
         val scrapedOn = trip?.getInstant("scraped_on")?.atZone(ZoneId.systemDefault())?.toLocalDate() ?: LocalDate.MIN
         if (now.isAfter(scrapedOn.plusDays(RESCRAPE_DAYS_THRESHOLD))) {
             val hash = trip?.getString("hash")
@@ -51,10 +69,12 @@ class Scraper @Inject constructor(val vertx: Vertx,
                     if (vanmTrip != null) {
                         vanmTripManager.insert(Instant.now(), code, tripUrl, calculatedHash, vanmTrip)
                         Logger.info("Succesfully inserted scraped trip ($code) url: ($tripUrl)")
+                        scraped = true
                     }
                 }
             }
         }
+        return scraped
     }
 
 

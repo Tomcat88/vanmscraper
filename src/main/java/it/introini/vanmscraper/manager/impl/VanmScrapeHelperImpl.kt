@@ -24,7 +24,7 @@ class VanmScrapeHelperImpl @Inject constructor(val config:        Config,
     val MAX_CODE: Int = config.getInt("app.max_code", 9999)
 
     override fun insertScrapeRequest(now: Instant, code: String) {
-        requestCollection.insertOne(Document("status", "INSERTED").append("code", code).append("requested_on", now))
+        requestCollection.insertOne(Document("status", "INSERTED").append("code", code).append("requested_on", now.toString()))
     }
 
     override fun getScrapeRequests(buffer: Int): Collection<String> {
@@ -32,7 +32,7 @@ class VanmScrapeHelperImpl @Inject constructor(val config:        Config,
     }
 
     override fun completeScrapeRequests(now: Instant, codes: Collection<String>) {
-        requestCollection.updateMany(`in`("code", codes), combine(set("status", "COMPLETED"), set("completed_on", now)))
+        requestCollection.updateMany(`in`("code", codes), combine(set("status", "COMPLETED"), set("completed_on", now.toString())))
     }
 
     override fun getAndSetMaxCode(buffer: Int): Pair<Int, Int> {

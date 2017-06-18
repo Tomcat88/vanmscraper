@@ -23,11 +23,23 @@ class Scraper @Inject constructor(val vertx: Vertx,
     val RESCRAPE_DAYS_THRESHOLD :Long = config.getLong("app.rescrape_days_threshold", 1)
 
     fun start() {
+        startScraper()
+        startCheckScrapeRequests()
+    }
+
+    fun startScraper() {
         if (config.getBoolean("app.scraper.enable", false)) {
             vertx.setPeriodic(APP_DELAY, this::scrapeEvent)
-            vertx.setPeriodic(CHECK_REQUESTS_DELAY, this::checkScrapeRequest)
         } else {
             Logger.info("Scraper not enabled!")
+        }
+    }
+
+    fun startCheckScrapeRequests() {
+        if (config.getBoolean("app.check_scrape_requests.enable", false)) {
+            vertx.setPeriodic(CHECK_REQUESTS_DELAY, this::checkScrapeRequest)
+        } else {
+            Logger.info("Scrape requests checker not enabled!")
         }
     }
 
@@ -40,15 +52,22 @@ class Scraper @Inject constructor(val vertx: Vertx,
     private fun checkScrapeRequest(e: Long) {
         val today = LocalDate.now()
         val now = Instant.now()
-
-        vanmScrapeHelper.getScrapeRequests(SCRAPE_BUFFER).map {
-            Pair(it, scrapeByCode(it, today))
-        }.filter{
-            it.second
-        }.map {
-            it.first
-        }.let {
-            vanmScrapeHelper.completeScrapeRequests(now, it)
+        Logger.info("Checking scrape requests...")
+        val scrapeRequests = vanmScrapeHelper.getScrapeRequests(SCRAPE_BUFFER)
+        if (scrapeRequests.isNotEmpty()) {
+            Logger.info("...found ${scrapeRequests.size} requests")
+            scrapeRequests.map {
+                Logger.info("... scraping $it")
+                Pair(it, scrapeByCode(it, today))
+            }.filter {
+                it.second
+            }.map {
+                it.first
+            }.let {
+                vanmScrapeHelper.completeScrapeRequests(now, it)
+            }
+        } else {
+            Logger.info("... no request found")
         }
     }
 
